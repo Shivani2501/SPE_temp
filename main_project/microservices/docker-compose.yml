@@ -1,0 +1,50 @@
+services:
+  dqn-service:
+    build: ./dqn-service
+    ports:
+      - "8000:8000"
+    networks:
+      - rl-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  agent-service:
+    build: ./agent-service
+    ports:
+      - "8001:8001"
+    depends_on:
+      - dqn-service
+    networks:
+      - rl-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+
+  training-service:
+    build: ./training-service
+    depends_on:
+      - agent-service
+    networks:
+      - rl-net
+    # privileged: true  # Removed, not needed without graphics/GPU
+    # runtime: nvidia   # Removed, not needed without graphics/GPU
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          memory: 2G
+
+networks:
+  rl-net:
+    driver: bridge
