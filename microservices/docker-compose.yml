@@ -1,0 +1,64 @@
+services:
+  dqn-service:
+    build: ./dqn-service
+    # ports:
+    #   - "8000:8000"
+    networks:
+      - rl-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G # Increased memory limit
+        reservations:
+          memory: 1G # Increased memory reservation
+    healthcheck: # Added section
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"] # Use the /health endpoint
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 90s # Increased startup time to 90s
+
+  agent-service:
+    build: ./agent-service
+    # ports:
+    #   - "8001:8000"
+    depends_on:
+      dqn-service:
+        condition: service_healthy
+    networks:
+      - rl-net
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          memory: 512M
+    healthcheck: # Added section
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"] # Use the /health endpoint on port 8001
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s # Give it 30s to start up before first check
+
+  training-service:
+    build: ./training-service
+    depends_on:
+      agent-service: # Changed to wait for healthy state
+        condition: service_healthy
+    networks:
+      - rl-net
+    # privileged: true  # Removed, not needed without graphics/GPU
+    # runtime: nvidia   # Removed, not needed without graphics/GPU
+    deploy:
+      resources:
+        limits:
+          cpus: '4'
+          memory: 4G
+        reservations:
+          memory: 2G
+
+networks:
+  rl-net:
+    driver: bridge
